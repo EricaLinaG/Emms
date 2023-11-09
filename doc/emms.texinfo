@@ -597,6 +597,14 @@ Shuffle the current playlist. This uses
 Sort the current playlist. This uses
 @var{emms-playlist-sort-function}.
 @end defun
+@defun emms-lock-queue
+Lock the current active playlist to its playlist.
+@var{emms-playlist-sort-function}.
+@end defun
+@defun emms-unlock-queue
+Unlock the current active playlist from its playlist.
+@var{emms-playlist-sort-function}.
+@end defun
 @defun emms-show &optional insertp
 Describe the current Emms track in the minibuffer. If @var{insertp} is
 non-nil, insert the description into the current buffer instead. This
@@ -1363,6 +1371,9 @@ on the current playlist.
 Add files in the playlist at point to the current playlist buffer.
 If we are in the current playlist, make a new playlist buffer and
 set it as current.
+@item i
+@findex emms-playlist-playlist-insert-track
+Insert track at point into active playlist.
 @item b
 @findex emms-playlist-set-playlist-buffer
 Set the current playlist buffer.
@@ -1754,6 +1765,10 @@ playlist or hiding both. Tries to behave sanely if the user has
 manually changed the window configuration.
 @end defun
 
+@defun emms-browse-by-albumartist
+Display the browser and order the tracks by album artist.
+@end defun
+
 @defun emms-browse-by-artist
 Display the browser and order the tracks by artist.
 @end defun
@@ -1886,6 +1901,11 @@ Search the collection by album.
 @findex emms-browser-search-by-artist
 Search the collection by artist.
 
+@item s o
+@kindex s a (emms-browser)
+@findex emms-browser-search-by-albumartist
+Search the collection by album artist.
+
 @item s s
 @kindex s s (emms-browser)
 @findex emms-browser-search-by-names
@@ -1895,6 +1915,11 @@ Search the collection by names.
 @kindex s t (emms-browser)
 @findex emms-browser-search-by-title
 Search the collection by title.
+
+@item b 1
+@kindex b 1 (emms-browser)
+@findex emms-browse-by-albumartist
+Browse the collection by album artist.
 
 @item b 1
 @kindex b 1 (emms-browser)
@@ -1925,6 +1950,12 @@ Lookup the album using Pitchfork.
 @kindex W a w (emms-browser)
 @findex emms-browser-lookup-album-on-wikipedia
 Lookup the album using Wikipedia.
+@end table
+
+@item W a w
+@kindex W a w (emms-browser)
+@findex emms-browser-lookup-albumiartist`-on-wikipedia
+Lookup the album artist using Wikipedia.
 @end table
 
 
@@ -2059,8 +2090,28 @@ structure looks, the display format and display faces.
 
 @subheading Changing Tree Structure
 
-You can change the way the tree is displayed by modifying the function
-@command{emms-browser-next-mapping-type}.
+You can change the way the tree is displayed by setting the value of
+@var{emms-browser-tree-node-map}
+
+@lisp
+(setq emms-browser-tree-node-map emms-browser-tree-node-map-default)
+@end lisp
+
+The node map specifies the tree as an alist.
+Follow the chain of fields from the starting browse type
+to see how the browser tree will be built. ie. Starting with
+album artist yields a tree with album artist, artist and album as nodes.
+
+@lisp
+(setq emms-browser-tree-node-map-default
+      '((info-albumartist . info-artist)
+        (info-artist      . info-album)
+        (info-composer    . info-album)
+        (info-performer   . info-album)
+        (info-album       . info-title)
+        (info-genre       . info-artist)
+        (info-year        . info-artist)))
+@end lisp
 
 The following code displays artist->track instead of
 artist->album->track when you switch to the 'singles' filter:
@@ -2123,6 +2174,8 @@ The format specifiers available include:
 @item
 %a    the artist name of the track
 @item
+%o    the album artist name
+@item
 %t    the title of the track
 @item
 %T    the track number
@@ -2165,6 +2218,10 @@ prefix. `emms-playlist-sort' can be loaded by invoking:
 @end lisp
 
 @defun emms-playlist-sort-by-info-artist
+Sort by artist name.
+@end defun
+
+@defun emms-playlist-sort-by-info-albumartist
 Sort by artist name.
 @end defun
 
@@ -2884,6 +2941,11 @@ available:
 @kindex RET
 @findex emms-metaplaylist-mode-goto-current
 Make the buffer at point the Emms playlist buffer and switch to it.
+
+@item V
+@kindex v
+@findex emms-metaplaylist-mode-goto
+Visit the playlist at point.
 
 @item SPC
 @kindex SPC
