@@ -373,7 +373,38 @@ Called once for each directory."
 (defvar emms-browser-current-filter-name nil
   "The name of the current filter in place, if any.")
 
-(defvar emms-browser-tree-node-map emms-browser-tree-node-map-default)
+(defvar emms-browser-tree-node-map-default
+  '((info-albumartist . info-artist)
+    (info-artist      . info-album)
+    (info-composer    . info-album)
+    (info-performer   . info-album)
+    (info-album       . info-title)
+    (info-genre       . info-artist)
+    (info-year        . info-artist))
+  "How to build the browse tree, by album artist, artist, album.")
+
+(defvar emms-browser-tree-node-map-AAgAt
+  '((info-albumartist . info-genre)
+    (info-artist      . info-title)
+    (info-composer    . info-album)
+    (info-performer   . info-album)
+    (info-album       . info-albumartist)
+    (info-genre       . info-artist)
+    (info-year        . info-album))
+  "How to build the browse tree, by album artist, genre, artist")
+
+(defvar emms-browser-tree-node-map-AAAgt
+  '((info-albumartist . info-artist)
+    (info-artist      . info-genre)
+    (info-composer    . info-album)
+    (info-performer   . info-album)
+    (info-album       . info-albumartist)
+    (info-genre       . info-title)
+    (info-year        . info-album))
+  "How to build the browse tree, by album artist, artist, genre")
+
+(defvar emms-browser-tree-node-map emms-browser-tree-node-map-default
+  "The alist mapping of the browser tree node map.")
 
 (defvar emms-browser-mode-map
   (let ((map (make-sparse-keymap)))
@@ -706,36 +737,6 @@ browser, and hit 'b 1' to refresh.")))
 ;; --------------------------------------------------
 ;; Building a subitem tree
 ;; --------------------------------------------------
-;; "How to build the browse tree, by album artist, artist, album."
-(setq emms-browser-tree-node-map-default
-      '((info-albumartist . info-artist)
-        (info-artist      . info-album)
-        (info-composer    . info-album)
-        (info-performer   . info-album)
-        (info-album       . info-title)
-        (info-genre       . info-artist)
-        (info-year        . info-artist)))
-
-;; "How to build the browse tree, by album artist, genre, artist"
-(setq emms-browser-tree-node-map-AAgAt
-      '((info-albumartist . info-genre)
-        (info-artist      . info-title)
-        (info-composer    . info-album)
-        (info-performer   . info-album)
-        (info-album       . info-albumartist)
-        (info-genre       . info-artist)
-        (info-year        . info-album)))
-
-;; "How to build the browse tree, by album artist, artist, genre"
-(setq emms-browser-tree-node-map-AAAgt
-      '((info-albumartist . info-artist)
-        (info-artist      . info-genre)
-        (info-composer    . info-album)
-        (info-performer   . info-album)
-        (info-album       . info-albumartist)
-        (info-genre       . info-title)
-        (info-year        . info-album)))
-
 (defun emms-browser-next-mapping-type (current-mapping)
   "Return the next sensible mapping.
 Eg. if CURRENT-MAPPING is currently \\='info-artist, return
