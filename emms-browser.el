@@ -373,6 +373,8 @@ Called once for each directory."
 (defvar emms-browser-current-filter-name nil
   "The name of the current filter in place, if any.")
 
+(defvar emms-browser-tree-node-map emms-browser-tree-node-map-default)
+
 (defvar emms-browser-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "q") #'emms-browser-bury-buffer)
@@ -571,6 +573,7 @@ If a browser search exists, return it."
       (emms-browser-show-empty-cache-message))
     (goto-char (point-min))))
 
+(emms-browser-add-category "albumartist" 'info-albumartist)
 (emms-browser-add-category "artist" 'info-artist)
 (emms-browser-add-category "composer" 'info-composer)
 (emms-browser-add-category "performer" 'info-performer)
@@ -703,19 +706,41 @@ browser, and hit 'b 1' to refresh.")))
 ;; --------------------------------------------------
 ;; Building a subitem tree
 ;; --------------------------------------------------
+(defvar emms-browser-tree-node-map-default
+  "How to build the browse tree, by album artist, artist, album."
+  '((info-albumartist . info-artist)
+    (info-artist      . info-album)
+    (info-composer    . info-album)
+    (info-performer   . info-album)
+    (info-album       . info-title)
+    (info-genre       . info-artist)
+    (info-year        . info-artist)))
+
+(defvar emms-browser-tree-node-map-AAgAt
+  "How to build the browse tree, by album artist, genre, artist"
+  '((info-albumartist . info-genre)
+    (info-artist      . info-title)
+    (info-composer    . info-album)
+    (info-performer   . info-album)
+    (info-album       . info-albumartist)
+    (info-genre       . info-artist)
+    (info-year        . info-album)))
+
+(defvar emms-browser-tree-node-map-AAAgt
+  "How to build the browse tree, by album artist, artist, genre"
+  '((info-albumartist . info-artist)
+    (info-artist      . info-genre)
+    (info-composer    . info-album)
+    (info-performer   . info-album)
+    (info-album       . info-albumartist)
+    (info-genre       . info-title)
+    (info-year        . info-album)))
 
 (defun emms-browser-next-mapping-type (current-mapping)
   "Return the next sensible mapping.
 Eg. if CURRENT-MAPPING is currently \\='info-artist, return
  \\='info-album."
-  (cond
-   ((eq current-mapping 'info-albumartist) 'info-artist)
-   ((eq current-mapping 'info-artist) 'info-album)
-   ((eq current-mapping 'info-composer) 'info-album)
-   ((eq current-mapping 'info-performer) 'info-album)
-   ((eq current-mapping 'info-album) 'info-title)
-   ((eq current-mapping 'info-genre) 'info-artist)
-   ((eq current-mapping 'info-year) 'info-artist)))
+  (alist-get current-mapping emms-browser-tree-node-map))
 
 (defun emms-browser-make-bdata-tree (type level tracks name)
   "Build a tree of browser DB elements for tracks."
