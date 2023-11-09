@@ -359,9 +359,6 @@ Called once for each directory."
 (defvar emms-browser-search-buffer-name "*emms-browser-search*"
   "The search buffer name.")
 
-(defvar emms-browser-default-search-tree-type 'info-artist
-  "Start the search results tree with the given info-type")
-
 (defvar emms-browser-top-level-hash nil
   "The current mapping db, eg. artist -> track.")
 (make-variable-buffer-local 'emms-browser-top-level-hash)
@@ -1617,11 +1614,11 @@ included."
 
 (defun emms-browser-render-search (tracks)
   (let ((entries
-         (emms-browser-make-sorted-alist emms-browser-default-search-tree-type tracks)))
+         (emms-browser-make-sorted-alist emms-browser-default-browse-type tracks)))
     (dolist (entry entries)
       (emms-browser-insert-top-level-entry (car entry)
                                            (cdr entry)
-                                           emms-browser-default-search-tree-type))))
+                                           emms-browser-default-browse-type))))
 
 ;; hmm - should we be doing this?
 (defun emms-browser-kill-search ()
