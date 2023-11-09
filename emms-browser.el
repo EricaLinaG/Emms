@@ -706,35 +706,35 @@ browser, and hit 'b 1' to refresh.")))
 ;; --------------------------------------------------
 ;; Building a subitem tree
 ;; --------------------------------------------------
-(defvar emms-browser-tree-node-map-default
-  "How to build the browse tree, by album artist, artist, album."
-  '((info-albumartist . info-artist)
-    (info-artist      . info-album)
-    (info-composer    . info-album)
-    (info-performer   . info-album)
-    (info-album       . info-title)
-    (info-genre       . info-artist)
-    (info-year        . info-artist)))
+;; "How to build the browse tree, by album artist, artist, album."
+(setq emms-browser-tree-node-map-default
+      '((info-albumartist . info-artist)
+        (info-artist      . info-album)
+        (info-composer    . info-album)
+        (info-performer   . info-album)
+        (info-album       . info-title)
+        (info-genre       . info-artist)
+        (info-year        . info-artist)))
 
-(defvar emms-browser-tree-node-map-AAgAt
-  "How to build the browse tree, by album artist, genre, artist"
-  '((info-albumartist . info-genre)
-    (info-artist      . info-title)
-    (info-composer    . info-album)
-    (info-performer   . info-album)
-    (info-album       . info-albumartist)
-    (info-genre       . info-artist)
-    (info-year        . info-album)))
+;; "How to build the browse tree, by album artist, genre, artist"
+(setq emms-browser-tree-node-map-AAgAt
+      '((info-albumartist . info-genre)
+        (info-artist      . info-title)
+        (info-composer    . info-album)
+        (info-performer   . info-album)
+        (info-album       . info-albumartist)
+        (info-genre       . info-artist)
+        (info-year        . info-album)))
 
-(defvar emms-browser-tree-node-map-AAAgt
-  "How to build the browse tree, by album artist, artist, genre"
-  '((info-albumartist . info-artist)
-    (info-artist      . info-genre)
-    (info-composer    . info-album)
-    (info-performer   . info-album)
-    (info-album       . info-albumartist)
-    (info-genre       . info-title)
-    (info-year        . info-album)))
+;; "How to build the browse tree, by album artist, artist, genre"
+(setq emms-browser-tree-node-map-AAAgt
+      '((info-albumartist . info-artist)
+        (info-artist      . info-genre)
+        (info-composer    . info-album)
+        (info-performer   . info-album)
+        (info-album       . info-albumartist)
+        (info-genre       . info-title)
+        (info-year        . info-album)))
 
 (defun emms-browser-next-mapping-type (current-mapping)
   "Return the next sensible mapping.
@@ -786,7 +786,7 @@ artist1 -> album1 -> *track* 1.."
       (setq title (emms-track-get track 'info-title))
       (if (not (and (or aartist artist) title))
           key
-	(concat aartist : artist " - " title)))
+	(concat aartist " : " artist " - " title)))
      (t key))))
 
 (defun emms-browser-track-number (track)
