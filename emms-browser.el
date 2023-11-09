@@ -359,6 +359,9 @@ Called once for each directory."
 (defvar emms-browser-search-buffer-name "*emms-browser-search*"
   "The search buffer name.")
 
+(defvar emms-browser-default-search-tree-type 'info-artist
+  "Start the search results tree with the given info-type")
+
 (defvar emms-browser-top-level-hash nil
   "The current mapping db, eg. artist -> track.")
 (make-variable-buffer-local 'emms-browser-top-level-hash)
@@ -403,12 +406,15 @@ Called once for each directory."
     (define-key map (kbd "b 4") #'emms-browse-by-year)
     (define-key map (kbd "b 5") #'emms-browse-by-composer)
     (define-key map (kbd "b 6") #'emms-browse-by-performer)
+    (define-key map (kbd "b 7") #'emms-browse-by-albumartist)
+    (define-key map (kbd "s o") #'emms-browser-search-by-albumartist)
     (define-key map (kbd "s a") #'emms-browser-search-by-artist)
     (define-key map (kbd "s c") #'emms-browser-search-by-composer)
     (define-key map (kbd "s p") #'emms-browser-search-by-performer)
     (define-key map (kbd "s A") #'emms-browser-search-by-album)
     (define-key map (kbd "s t") #'emms-browser-search-by-title)
     (define-key map (kbd "s s") #'emms-browser-search-by-names)
+    (define-key map (kbd "W o w") #'emms-browser-lookup-albumartist-on-wikipedia)
     (define-key map (kbd "W A w") #'emms-browser-lookup-artist-on-wikipedia)
     (define-key map (kbd "W C w") #'emms-browser-lookup-composer-on-wikipedia)
     (define-key map (kbd "W P w") #'emms-browser-lookup-performer-on-wikipedia)
@@ -706,6 +712,7 @@ browser, and hit 'b 1' to refresh.")))
 Eg. if CURRENT-MAPPING is currently \\='info-artist, return
  \\='info-album."
   (cond
+   ((eq current-mapping 'info-albumartist) 'info-artist)
    ((eq current-mapping 'info-artist) 'info-album)
    ((eq current-mapping 'info-composer) 'info-album)
    ((eq current-mapping 'info-performer) 'info-album)
@@ -752,11 +759,12 @@ artist1 -> album1 -> *track* 1.."
         artist title) ;; only the first track
     (cond
      ((eq type 'info-title)
+      (setq aartist (emms-track-get track 'info-albumartist))
       (setq artist (emms-track-get track 'info-artist))
       (setq title (emms-track-get track 'info-title))
-      (if (not (and artist title))
+      (if (not (and (or aartist artist) title))
           key
-	(concat artist " - " title)))
+	(concat aartist : artist " - " title)))
      (t key))))
 
 (defun emms-browser-track-number (track)
@@ -918,6 +926,7 @@ Uses `emms-browser-alpha-sort-function'."
   (let ((sort-func
          (cond
           ((or
+            (eq type 'info-albumartist)
             (eq type 'info-artist)
             (eq type 'info-composer)
             (eq type 'info-performer)
@@ -928,8 +937,9 @@ Uses `emms-browser-alpha-sort-function'."
            emms-browser-album-sort-function)
           ((eq type 'info-title)
            'emms-browser-sort-by-track)
-          (t (message "Can't sort unknown mapping!")))))
+          (t (message (concat "Can't sort unknown mapping!" type))))))
     (funcall sort-func alist)))
+
 
 ;; --------------------------------------------------
 ;; Subitem operations on the buffer
@@ -1414,6 +1424,10 @@ tracks from point, it does not delete files."
   (emms-browser-lookup
    field "http://en.wikipedia.org/wiki/Special:Search?search="))
 
+(defun emms-browser-lookup-albumartist-on-wikipedia ()
+  (interactive)
+  (emms-browser-lookup-wikipedia 'info-albumartist))
+
 (defun emms-browser-lookup-artist-on-wikipedia ()
   (interactive)
   (emms-browser-lookup-wikipedia 'info-artist))
@@ -1551,6 +1565,7 @@ Returns the playlist window."
 ;; Searching
 ;; --------------------------------------------------
 
+
 (defun emms-browser-filter-cache (search-list)
   "Return a list of tracks that match SEARCH-LIST.
 SEARCH-LIST is a list of cons pairs, in the form:
@@ -1602,11 +1617,11 @@ included."
 
 (defun emms-browser-render-search (tracks)
   (let ((entries
-         (emms-browser-make-sorted-alist 'info-artist tracks)))
+         (emms-browser-make-sorted-alist emms-browser-default-search-tree-type tracks)))
     (dolist (entry entries)
       (emms-browser-insert-top-level-entry (car entry)
                                            (cdr entry)
-                                           'info-artist))))
+                                           emms-browser-default-search-tree-type))))
 
 ;; hmm - should we be doing this?
 (defun emms-browser-kill-search ()
@@ -1614,6 +1629,10 @@ included."
   (interactive)
   (kill-buffer (current-buffer)))
 
+(defun emms-browser-search-by-albumartist ()
+  (interactive)
+  (emms-browser-search '(info-albumartist)))
+`
 (defun emms-browser-search-by-artist ()
   (interactive)
   (emms-browser-search '(info-artist)))
@@ -1636,7 +1655,8 @@ included."
 
 (defun emms-browser-search-by-names ()
   (interactive)
-  (emms-browser-search '(info-artist info-composer info-performer info-title info-album)))
+  (emms-browser-search '(info-albumartist info-artist info-composer info-performer info-title info-album)))
+
 
 ;; --------------------------------------------------
 ;; Album covers
@@ -1767,6 +1787,7 @@ If > album level, most of the track data will not make sense."
             ("y" . ,(emms-track-get-year track))
             ("A" . ,(emms-track-get track 'info-album))
             ("a" . ,(emms-track-get track 'info-artist))
+            ("o" . ,(emms-track-get track 'info-albumartist))
             ("C" . ,(emms-track-get track 'info-composer))
             ("p" . ,(emms-track-get track 'info-performer))
             ("t" . ,(emms-track-get track 'info-title))
@@ -1823,6 +1844,7 @@ If > album level, most of the track data will not make sense."
          (name (cond
                 ((or (eq type 'info-year)
                      (eq type 'info-genre)) "year/genre")
+                ((eq type 'info-albumartist) "albumartist")
                 ((eq type 'info-artist) "artist")
                 ((eq type 'info-composer) "composer")
                 ((eq type 'info-performer) "performer")
@@ -1955,6 +1977,7 @@ the text that it generates."
                 name
                 " in a browser/playlist buffer."))))
 
+(emms-browser-make-face "albumartist"     "#aaaabb" "#444455" 1.3)
 (emms-browser-make-face "year/genre" "#aaaaff" "#444477" 1.5)
 (emms-browser-make-face "artist"     "#aaaaff" "#444477" 1.3)
 (emms-browser-make-face "composer"   "#aaaaff" "#444477" 1.3)
