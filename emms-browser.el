@@ -487,10 +487,12 @@ example function is `emms-browse-by-artist'."
 \\{emms-browser-mode-map}"
   ;; create a new buffer
   (interactive)
+  (kill-all-local-variables)
 
-  (use-local-map emms-browser-mode-map)
   (setq major-mode 'emms-browser-mode
         mode-name "Emms-Browser")
+
+  (use-local-map emms-browser-mode-map)
 
   (setq buffer-read-only t)
   (unless no-update
