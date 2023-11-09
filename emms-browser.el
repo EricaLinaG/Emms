@@ -1999,13 +1999,13 @@ the text that it generates."
                 name
                 " in a browser/playlist buffer."))))
 
-(emms-browser-make-face "albumartist"     "#aaaabb" "#444455" 1.3)
-(emms-browser-make-face "year/genre" "#aaaaff" "#444477" 1.5)
-(emms-browser-make-face "artist"     "#aaaaff" "#444477" 1.3)
-(emms-browser-make-face "composer"   "#aaaaff" "#444477" 1.3)
-(emms-browser-make-face "performer"  "#aaaaff" "#444477" 1.3)
-(emms-browser-make-face "album"      "#aaaaff" "#444477" 1.1)
-(emms-browser-make-face "track"      "#aaaaff" "#444477" 1.0)
+(emms-browser-make-face "albumartist" "#aaaabb" "#444455" 1.3)
+(emms-browser-make-face "year/genre"  "#aaaaff" "#444477" 1.5)
+(emms-browser-make-face "artist"      "#aaaaff" "#444477" 1.3)
+(emms-browser-make-face "composer"    "#aaaaff" "#444477" 1.3)
+(emms-browser-make-face "performer"   "#aaaaff" "#444477" 1.3)
+(emms-browser-make-face "album"       "#aaaaff" "#444477" 1.1)
+(emms-browser-make-face "track"       "#aaaaff" "#444477" 1.0)
 
 ;; --------------------------------------------------
 ;; Filtering
