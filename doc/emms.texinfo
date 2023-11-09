@@ -2496,6 +2496,14 @@ whose artist info field matches the given regular
 expression (default: the artist info field of the
 track at point).
 
+@item / A
+@kindex / A
+@findex emms-playlist-limit-to-info-albumartist
+Create a new playlist buffer and populate it with tracks
+whose album artist info field matches the given regular
+expression (default: the album artist info field of the
+track at point).
+
 @item / b
 @kindex / b
 @findex emms-playlist-limit-to-info-album
