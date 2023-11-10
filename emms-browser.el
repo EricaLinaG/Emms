@@ -182,8 +182,10 @@
 ;; %y    the album year
 ;; %A    the album name
 ;; %a    the artist name of the track
+;; %o    the album artist
 ;; %C    the composer name of the track
 ;; %p    the performer name of the track
+;; %g    the genre of the track.
 ;; %t    the title of the track
 ;; %T    the track number
 ;; %cS   a small album cover
@@ -1814,6 +1816,7 @@ If > album level, most of the track data will not make sense."
             ("C" . ,(emms-track-get track 'info-composer))
             ("p" . ,(emms-track-get track 'info-performer))
             ("t" . ,(emms-track-get track 'info-title))
+            ("g" . ,(emms-track-get track 'info-genre))
 	    ("D" . ,(emms-browser-disc-number track))
             ("T" . ,(emms-browser-track-number track))
             ("d" . ,(emms-browser-track-duration track))))

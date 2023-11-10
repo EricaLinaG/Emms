@@ -2180,6 +2180,8 @@ The format specifiers available include:
 @item
 %T    the track number
 @item
+%g    the genre of the track.
+@item
 %cS   a small album cover
 @item
 %cM   a medium album cover
@@ -2194,7 +2196,7 @@ data from the first track.
 
 The faces used to display the various fields are also customizable.
 They are in the format emms-browser-<type>-face, where type is one of
-"year/genre", "artist", "album" or "track". Note that faces lack the
+"year/genre", "albumartist", "artist", "album" or "track". Note that faces lack the
 initial "info-" part. For example, to change the artist face, type M-x
 @command{customize-face} @command{emms-browser-artist-face}.
 
