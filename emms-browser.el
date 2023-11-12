@@ -463,6 +463,7 @@ Called once for each directory."
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map emms-browser-mode-map)
     (define-key map (kbd "q") #'emms-browser-search-quit)
+    (define-key map (kbd "g") #'emms-browser-render-last-search)
     map)
   "Keymap for `emms-browser-mode'.")
 

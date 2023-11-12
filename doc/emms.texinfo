@@ -1787,6 +1787,15 @@ Display the browser and order the tracks by genre.
 Display the browser and order the tracks by year.
 @end defun
 
+@defun emms-browser-show-searches
+Show Search crumbs of the active searches.
+@end defun
+
+@defun emms-browser-render-last-search
+Render the results for the last search with current settings.
+@end defun
+
+
 Once the Browser is displayed you can use it to managed your track
 collection and playlists. The Browser is interactive and has its own
 keybindings.
