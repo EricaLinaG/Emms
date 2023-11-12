@@ -362,10 +362,12 @@ variables. For example:
 @lisp
 (setq emms-info-asynchronously nil)
 (setq emms-playlist-buffer-name "*Music*")
+(setq emms-browser-search-cache t)
 @end lisp
 
 The first @code{setq} turns off the asynchronous updating of info tags. The
 second sets the default name of the Emms playlist buffer.
+The third turns on the search cache and recursive searching.
 
 Another way to change Emms variables is to use the M-x
 @command{customize} mechanism provided by Emacs.
@@ -1915,6 +1917,11 @@ Search the collection by names.
 @kindex s t (emms-browser)
 @findex emms-browser-search-by-title
 Search the collection by title.
+
+@item s h
+@kindex s h (emms-browser)
+@findex emms-browser-show-searches
+Show the currently active searches in the search cache.
 
 @item b 1
 @kindex b 1 (emms-browser)

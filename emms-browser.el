@@ -446,6 +446,7 @@ Called once for each directory."
     (define-key map (kbd "s A") #'emms-browser-search-by-album)
     (define-key map (kbd "s t") #'emms-browser-search-by-title)
     (define-key map (kbd "s s") #'emms-browser-search-by-names)
+    (define-key map (kbd "s h") #'emms-browser-show-searches)
     (define-key map (kbd "W o w") #'emms-browser-lookup-albumartist-on-wikipedia)
     (define-key map (kbd "W A w") #'emms-browser-lookup-artist-on-wikipedia)
     (define-key map (kbd "W C w") #'emms-browser-lookup-composer-on-wikipedia)
@@ -461,7 +462,7 @@ Called once for each directory."
 (defvar emms-browser-search-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map emms-browser-mode-map)
-    (define-key map (kbd "q") #'emms-browser-kill-search)
+    (define-key map (kbd "q") #'emms-browser-search-quit)
     map)
   "Keymap for `emms-browser-mode'.")
 
@@ -1590,24 +1591,114 @@ Returns the playlist window."
 ;; Searching
 ;; --------------------------------------------------
 
+;; The search cache
+;; This keeps a list of search results in the same format as the emms-cache-db.
+;; Each set of results is stored in a cons with its search-list as its car.
+;; It might be nice to have a search name, but we don't know it.
+;; We can construct search crumbs from the search-lists.
+;; A fresh search from the emms-cache-db refreshes the cache.
+;; Searches invoked from the browser-search buffer will search the current
+;; search results cache rather than starting over with the emms-cache-db.
+;; Quitting the search buffer returns to the previous search until
+;; finally killing itself and returning to the browser window.
 
-(defun emms-browser-filter-cache (search-list)
-  "Return a list of tracks that match SEARCH-LIST.
+(defvar emms-browser-search-cache nil
+  "Turn on the search cache.")
+
+(defvar emms-browser-search-caches '()
+  "The stack of search result caches.")
+
+(defun emms-browser-cache-search (search-list cache)
+  "Store SEARCH-LIST and CACHE in a stack."
+  (when emms-browser-search-cache
+    (push (cons search-list cache) emms-browser-search-caches)))
+
+(defun emms-browser-get-search-keys ()
+  "Return the search-list keys for the current search cache."
+  (if (and emms-browser-search-cache
+           (< 0 (length emms-browser-search-caches)))
+      (reverse (mapcar #'car emms-browser-search-caches))
+    '()))
+
+(defun emms-browser-format-search-list (search-list)
+  "Create a string format of a SEARCH-LIST."
+  (let ((infos (append (car (car search-list))))
+        (svalue (cdar search-list)))
+    (format "%s - %s"
+            (mapconcat
+             `(lambda (info) (substring (format "%s" (symbol-name info))  5)) infos " : ")
+            svalue)))
+
+(defun emms-browser-search-crumbs ()
+  "Create a list of search crumb strings for the current search cache."
+  (let ((search-lists (emms-browser-get-search-keys)))
+    (mapcar #'emms-browser-format-search-list search-lists)))
+
+(defun emms-browser-show-searches ()
+  "Message the current search cache crumbs."
+  (interactive)
+  (message "Emms - Search Crumbs:")
+  (mapc (lambda (crumb) (message "%s" crumb)) (emms-browser-search-crumbs)))
+
+(defun emms-browser-get-last-search-cache ()
+  "Return the cache portion of the last search cache entry.
+Returns the emms-cache-db if the cache is turned off."
+  (if (and emms-browser-search-cache
+           (< 0 (length emms-browser-search-caches)))
+      (cdar emms-browser-search-caches)
+    emms-cache-db))
+
+(defun emms-browser-cache-to-tracks (cache)
+  "Return a list of tracks from the CACHE given."
+  (let (tracks)
+    (maphash (lambda (_k track)
+               (push track tracks))
+             cache)
+    tracks))
+
+(defun emms-browser-render-last-search ()
+  "Render the results for the top of the search cache stack."
+  (interactive)
+  (emms-with-inhibit-read-only-t
+   (emms-browser-render-search
+    (emms-browser-cache-to-tracks
+     (emms-browser-get-last-search-cache))))
+  (emms-browser-expand-all))
+
+(defun emms-browser-pop-last-search()
+  "Pop the search results cache and then render to show the previous search result.
+Quit when there is no result history left."
+  (pop emms-browser-search-caches)
+  (if (< 0 (length emms-browser-search-caches))
+      (emms-browser-render-last-search)
+    (emms-browser-kill-search)))
+
+(defun emms-browser-filter-tracks (source search-list)
+  "Return a list of tracks in SOURCE that match SEARCH-LIST.
+SOURCE is either emms-cache-db or a cache of search results.
 SEARCH-LIST is a list of cons pairs, in the form:
 
   ((field1 field2) string)
 
 If string matches any of the fields in a cons pair, it will be
-included."
+included. The resulting tracks are also pushed onto
+emms-browser-last-search-caches in the same format as the emms-cache-db."
 
-  (let (tracks)
-    (maphash (lambda (_k track)
+  (let ((tracks nil)
+        (search-cache (make-hash-table
+                       :test (if (fboundp 'define-hash-table-test)
+                                 'string-hash
+                               'equal))))
+    (maphash (lambda (path track)
                (when (emms-browser-matches-p track search-list)
-                 (push track tracks)))
-             emms-cache-db)
+                 (push track tracks)
+                 (puthash path track search-cache)))
+             source)
+    (emms-browser-cache-search search-list search-cache)
     tracks))
 
 (defun emms-browser-matches-p (track search-list)
+  "Do the actual string matching for the SEARCH-LIST against TRACK."
   (let (no-match matched)
     (dolist (item search-list)
       (setq matched nil)
@@ -1624,23 +1715,34 @@ included."
   (switch-to-buffer
    (get-buffer-create emms-browser-search-buffer-name))
   (emms-browser-mode t)
-  (use-local-map emms-browser-search-mode-map)
-  (emms-with-inhibit-read-only-t
-   (delete-region (point-min) (point-max))))
+  (use-local-map emms-browser-search-mode-map))
+
+(defun emms-browser-search-source-cache()
+  "Return the last search cache or the emms-cache-db`."
+  (if (string= (buffer-name) emms-browser-search-buffer-name)
+      (emms-browser-get-last-search-cache)
+    emms-cache-db))
 
 (defun emms-browser-search (fields)
-  "Search for STR using FIELDS."
+  "Search in the cache or the last search result cache for STR using FIELDS."
   (let* ((prompt (format "Searching with %S: " fields))
-         (str (read-string prompt)))
-    (emms-browser-search-buffer-go)
+         (str (read-string prompt))
+         (track-cache (emms-browser-search-source-cache)))
+    (when (eq track-cache emms-cache-db)
+      (setq emms-browser-search-caches '())
+      (emms-browser-search-buffer-go))
+
     (emms-with-inhibit-read-only-t
      (emms-browser-render-search
-      (emms-browser-filter-cache
-       (list (list fields str)))))
+      (emms-browser-filter-tracks track-cache
+                                  (list (list fields str)))))
     (emms-browser-expand-all)
     (goto-char (point-min))))
 
 (defun emms-browser-render-search (tracks)
+  "Render a browser tree with TRACKS."
+  (emms-with-inhibit-read-only-t
+   (delete-region (point-min) (point-max)))
   (let ((entries
          (emms-browser-make-sorted-alist emms-browser-default-browse-type tracks)))
     (dolist (entry entries)
@@ -1652,7 +1754,15 @@ included."
 (defun emms-browser-kill-search ()
   "Kill the buffer when q is hit."
   (interactive)
-  (kill-buffer (current-buffer)))
+  (when (string= (buffer-name) emms-browser-search-buffer-name)
+    (kill-buffer (current-buffer))))
+
+(defun emms-browser-search-quit ()
+  "Pop the search cache or quit."
+  (interactive)
+  (if emms-browser-search-cache
+      (emms-browser-pop-last-search)
+    (emms-browser-kill-search)))
 
 (defun emms-browser-search-by-albumartist ()
   (interactive)
