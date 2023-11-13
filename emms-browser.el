@@ -1569,10 +1569,10 @@ Returns the playlist window."
         ;; make q in the playlist window hide the linked browser
         (when (boundp 'emms-playlist-mode-map)
           (define-key emms-playlist-mode-map (kbd "q")
-            (lambda ()
-              (interactive)
-              (emms-browser-hide-linked-window)
-              (bury-buffer))))
+                      (lambda ()
+                        (interactive)
+                        (emms-browser-hide-linked-window)
+                        (bury-buffer))))
         (setq pwin (get-buffer-window pbuf))))
     pwin))
 
@@ -1627,7 +1627,7 @@ Returns the playlist window."
         (svalue (cdar search-list)))
     (format "%s - %s"
             (mapconcat
-             `(lambda (info) (substring (symbol-name info)  5)) infos " : ")
+             `(lambda (info) (substring (symbol-name info)  5)) infos " | ")
             svalue)))
 
 (defun emms-browser-search-crumbs ()
@@ -1664,6 +1664,7 @@ Returns the emms-cache-db if the cache is turned off."
    (emms-browser-render-search
     (emms-browser-cache-to-tracks
      (emms-browser-get-last-search-cache))))
+  (emms-browser-mark-entry)
   (emms-browser-expand-all))
 
 (defun emms-browser-pop-last-search()
@@ -1737,6 +1738,7 @@ emms-browser-last-search-caches in the same format as the emms-cache-db."
      (emms-browser-render-search
       (emms-browser-filter-tracks track-cache
                                   (list (list fields str)))))
+    (emms-browser-mark-entry)
     (emms-browser-expand-all)
     (goto-char (point-min))))
 
