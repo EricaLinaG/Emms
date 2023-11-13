@@ -1627,7 +1627,7 @@ Returns the playlist window."
         (svalue (cdar search-list)))
     (format "%s - %s"
             (mapconcat
-             `(lambda (info) (substring (format "%s" (symbol-name info))  5)) infos " : ")
+             `(lambda (info) (substring (symbol-name info)  5)) infos " : ")
             svalue)))
 
 (defun emms-browser-search-crumbs ()
@@ -1638,8 +1638,8 @@ Returns the playlist window."
 (defun emms-browser-show-searches ()
   "Message the current search cache crumbs."
   (interactive)
-  (message "Emms - Search Crumbs:")
-  (mapc (lambda (crumb) (message "%s" crumb)) (emms-browser-search-crumbs)))
+  (message "Emms Search Crumbs:\n%s"
+           (mapconcat #'identity (emms-browser-search-crumbs) "\n")))
 
 (defun emms-browser-get-last-search-cache ()
   "Return the cache portion of the last search cache entry.
@@ -1768,7 +1768,7 @@ emms-browser-last-search-caches in the same format as the emms-cache-db."
 (defun emms-browser-search-by-albumartist ()
   (interactive)
   (emms-browser-search '(info-albumartist)))
-`
+
 (defun emms-browser-search-by-artist ()
   (interactive)
   (emms-browser-search '(info-artist)))
