@@ -362,7 +362,6 @@ variables. For example:
 @lisp
 (setq emms-info-asynchronously nil)
 (setq emms-playlist-buffer-name "*Music*")
-(setq emms-browser-search-cache t)
 @end lisp
 
 The first @code{setq} turns off the asynchronous updating of info tags. The
@@ -601,11 +600,9 @@ Sort the current playlist. This uses
 @end defun
 @defun emms-lock-queue
 Lock the current active playlist to its playlist.
-@var{emms-playlist-sort-function}.
 @end defun
 @defun emms-unlock-queue
 Unlock the current active playlist from its playlist.
-@var{emms-playlist-sort-function}.
 @end defun
 @defun emms-show &optional insertp
 Describe the current Emms track in the minibuffer. If @var{insertp} is
@@ -1966,12 +1963,21 @@ Lookup the album using Pitchfork.
 @kindex W a w (emms-browser)
 @findex emms-browser-lookup-album-on-wikipedia
 Lookup the album using Wikipedia.
-@end table
 
 @item W a w
 @kindex W a w (emms-browser)
 @findex emms-browser-lookup-albumiartist`-on-wikipedia
 Lookup the album artist using Wikipedia.
+
+@item f s
+@kindex f s (emms-browser)
+@findex emms-browser-select-filter
+Select the filter to use when displaying the browse-by and search windows.
+
+@item f t
+@kindex f t (emms-browser)
+@findex emms-browser-toggle-filter
+Toggle between the current filter and the emms-browser-default-filter.
 @end table
 
 
@@ -1983,13 +1989,24 @@ If you want to display a subset of your collection (such as a
 directory of 80s music, only avi files, etc.) then you can extend the
 Browser by defining ``filters''.
 
+There is one filter defined by Emms. The ``all'' filter which filters
+nothing. This is the default filter, which
+emms-browser-toggle-filter() will toggle to and from. The default
+filter can be changed by setting ``emms-browser-default-filter''
+
+@defopt emms-browser-default-filter
+The default filter to use when toggling filters.
+@end defopt
+
+@lisp
+(setq emms-browser-default-filter  "all")
+@end lisp
+
 Show everything:
 
 @lisp
 (emms-browser-make-filter "all" 'ignore)
 @end lisp
-
-Set "all" as the default filter:
 
 @lisp
 (emms-browser-set-filter (assoc "all" emms-browser-filters))

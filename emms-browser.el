@@ -454,6 +454,8 @@ Called once for each directory."
     (define-key map (kbd "W a w") #'emms-browser-lookup-album-on-wikipedia)
     (define-key map (kbd ">") #'emms-browser-next-filter)
     (define-key map (kbd "<") #'emms-browser-previous-filter)
+    (define-key map (kbd "f t") #'emms-browser-toggle-filter)
+    (define-key map (kbd "f s") #'emms-browser-select-filter)
     (define-key map (kbd "+") #'emms-volume-raise)
     (define-key map (kbd "-") #'emms-volume-lower)
     map)
@@ -463,7 +465,6 @@ Called once for each directory."
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map emms-browser-mode-map)
     (define-key map (kbd "q") #'emms-browser-search-quit)
-    (define-key map (kbd "g") #'emms-browser-render-last-search)
     map)
   "Keymap for `emms-browser-mode'.")
 
@@ -677,7 +678,7 @@ For \\='info-year TYPE, use \\='info-originalyear, \\='info-originaldate and
                    (if existing-entry
                        (puthash field (cons track existing-entry) hash)
                      (puthash field (list track) hash)))))
-             emms-cache-db)
+             (emms-browser-source-cache))
     hash))
 
 (defun emms-browser-render-hash (db type)
@@ -1603,21 +1604,16 @@ Returns the playlist window."
 ;; Quitting the search buffer returns to the previous search until
 ;; finally killing itself and returning to the browser window.
 
-(defvar emms-browser-search-cache nil
-  "Turn on the search cache.")
-
 (defvar emms-browser-search-caches '()
   "The stack of search result caches.")
 
 (defun emms-browser-cache-search (search-list cache)
   "Store SEARCH-LIST and CACHE in a stack."
-  (when emms-browser-search-cache
-    (push (cons search-list cache) emms-browser-search-caches)))
+  (push (cons search-list cache) emms-browser-search-caches))
 
 (defun emms-browser-get-search-keys ()
   "Return the search-list keys for the current search cache."
-  (if (and emms-browser-search-cache
-           (< 0 (length emms-browser-search-caches)))
+  (if (< 0 (length emms-browser-search-caches))
       (reverse (mapcar #'car emms-browser-search-caches))
     '()))
 
@@ -1638,44 +1634,33 @@ Returns the playlist window."
 (defun emms-browser-show-searches ()
   "Message the current search cache crumbs."
   (interactive)
-  (message "Emms Search Crumbs:\n%s"
+  (message "Emms: Current filter %s:\nCurrent Search:\n%s"
+           emms-browser-current-filter-name
            (mapconcat #'identity (emms-browser-search-crumbs) "\n")))
 
-(defun emms-browser-get-last-search-cache ()
-  "Return the cache portion of the last search cache entry.
-Returns the emms-cache-db if the cache is turned off."
-  (if (and emms-browser-search-cache
-           (< 0 (length emms-browser-search-caches)))
+(defun emms-browser-last-search-cache ()
+  "Return the cache portion of the last search cache entry."
+  (if (< 0 (length emms-browser-search-caches))
       (cdar emms-browser-search-caches)
     emms-cache-db))
 
-(defun emms-browser-cache-to-tracks (cache)
-  "Return a list of tracks from the CACHE given."
-  (let (tracks)
-    (maphash (lambda (_k track)
-               (push track tracks))
-             cache)
-    tracks))
+(defun emms-browser-source-cache ()
+  "Return the last search cache or the emms-cache-db.
+Browse by stays with the cache-db."
+  ;; keeping the browse-by and search buffers apart.
+  (if (string= (buffer-name) emms-browser-search-buffer-name)
+      (emms-browser-last-search-cache)
+    emms-cache-db))
 
-(defun emms-browser-render-last-search ()
-  "Render the results for the top of the search cache stack."
-  (interactive)
-  (emms-with-inhibit-read-only-t
-   (emms-browser-render-search
-    (emms-browser-cache-to-tracks
-     (emms-browser-get-last-search-cache))))
-  (emms-browser-mark-entry)
-  (emms-browser-expand-all))
-
-(defun emms-browser-pop-last-search()
+(defun emms-browser-pop-search ()
   "Pop the search results cache and then render to show the previous search result.
-Quit when there is no result history left."
+Quit when there is no search history left."
   (pop emms-browser-search-caches)
   (if (< 0 (length emms-browser-search-caches))
-      (emms-browser-render-last-search)
+      (emms-browser-search-refilter)
     (emms-browser-kill-search)))
 
-(defun emms-browser-filter-tracks (source search-list)
+(defun emms-browser-make-search-cache (source search-list)
   "Return a list of tracks in SOURCE that match SEARCH-LIST.
 SOURCE is either emms-cache-db or a cache of search results.
 SEARCH-LIST is a list of cons pairs, in the form:
@@ -1686,18 +1671,15 @@ If string matches any of the fields in a cons pair, it will be
 included. The resulting tracks are also pushed onto
 emms-browser-last-search-caches in the same format as the emms-cache-db."
 
-  (let ((tracks nil)
-        (search-cache (make-hash-table
+  (let ((search-cache (make-hash-table
                        :test (if (fboundp 'define-hash-table-test)
                                  'string-hash
                                'equal))))
     (maphash (lambda (path track)
                (when (emms-browser-matches-p track search-list)
-                 (push track tracks)
                  (puthash path track search-cache)))
              source)
-    (emms-browser-cache-search search-list search-cache)
-    tracks))
+    (emms-browser-cache-search search-list search-cache)))
 
 (defun emms-browser-matches-p (track search-list)
   "Do the actual string matching for the SEARCH-LIST against TRACK."
@@ -1719,39 +1701,37 @@ emms-browser-last-search-caches in the same format as the emms-cache-db."
   (emms-browser-mode t)
   (use-local-map emms-browser-search-mode-map))
 
-(defun emms-browser-search-source-cache()
-  "Return the last search cache or the emms-cache-db`."
-  (if (string= (buffer-name) emms-browser-search-buffer-name)
-      (emms-browser-get-last-search-cache)
-    emms-cache-db))
-
 (defun emms-browser-search (fields)
   "Search in the cache or the last search result cache for STR using FIELDS."
   (let* ((prompt (format "Searching with %S: " fields))
          (str (read-string prompt))
-         (track-cache (emms-browser-search-source-cache)))
+         (track-cache (emms-browser-source-cache)))
     (when (eq track-cache emms-cache-db)
       (setq emms-browser-search-caches '())
       (emms-browser-search-buffer-go))
 
-    (emms-with-inhibit-read-only-t
-     (emms-browser-render-search
-      (emms-browser-filter-tracks track-cache
-                                  (list (list fields str)))))
-    (emms-browser-mark-entry)
-    (emms-browser-expand-all)
-    (goto-char (point-min))))
+    (emms-browser-make-search-cache
+     track-cache
+     (list (list fields str))))
+  (emms-browser-search-refilter))
 
-(defun emms-browser-render-search (tracks)
-  "Render a browser tree with TRACKS."
+(defun emms-browser-show-empty-result-message ()
+  "Display some help if the results are empty."
+  (emms-with-inhibit-read-only-t
+   (insert (concat "No records match with the current filter: " emms-browser-current-filter-name))))
+
+(defun emms-browser-search-refilter()
+  "Render the search cache after filtering it with the active filter."
   (emms-with-inhibit-read-only-t
    (delete-region (point-min) (point-max)))
-  (let ((entries
-         (emms-browser-make-sorted-alist emms-browser-default-browse-type tracks)))
-    (dolist (entry entries)
-      (emms-browser-insert-top-level-entry (car entry)
-                                           (cdr entry)
-                                           emms-browser-default-browse-type))))
+
+  (let ((hash (emms-browser-make-hash-by emms-browser-default-browse-type)))
+    (emms-browser-render-hash hash emms-browser-default-browse-type)
+    (if (> (hash-table-count hash) 0)
+        (progn (emms-browser-mark-entry)
+               (emms-browser-expand-all))
+      (emms-browser-show-empty-result-message)))
+  (goto-char (point-min)))
 
 ;; hmm - should we be doing this?
 (defun emms-browser-kill-search ()
@@ -1763,9 +1743,7 @@ emms-browser-last-search-caches in the same format as the emms-cache-db."
 (defun emms-browser-search-quit ()
   "Pop the search cache or quit."
   (interactive)
-  (if emms-browser-search-cache
-      (emms-browser-pop-last-search)
-    (emms-browser-kill-search)))
+  (emms-browser-pop-search))
 
 (defun emms-browser-search-by-albumartist ()
   (interactive)
@@ -2132,15 +2110,14 @@ the text that it generates."
   "A list of available filters.")
 
 (defmacro emms-browser-make-filter (name func)
-  "Make a user-level function for filtering tracks.
+  "Make a user-level filter function with NAME for filtering tracks with FUNC.
 This:
- - defines an interactive function M-x emms-browser-show-NAME.
+ - defines an interactive function emms-browser-show-NAME.
  - defines a variable emms-browser-filter-NAME of (name . func).
  - adds the filter to `emms-browser-filters'."
   (let ((funcnam (intern (concat "emms-browser-show-" name)))
         (var  (intern (concat "emms-browser-filter-" name)))
-        (desc (concat "Filter the cache using rule '"
-                      name "'")))
+        (desc (concat "Filter the cache using rule: " name)))
     `(progn
        (defvar ,var nil ,desc)
        (setq ,var (cons ,name ,func))
@@ -2150,9 +2127,20 @@ This:
          (interactive)
          (emms-browser-refilter ,var)))))
 
+;; So we have a default of no filters to return to.
+(emms-browser-make-filter "all" 'ignore)
+
+(defvar emms-browser-default-filter  "all"
+  "The default filter to use.")
+
+(defvar emms-browser-last-browser-filter nil
+  "Keep track of the current active filter.")
+
 (defun emms-browser-set-filter (filter)
-  "Set the current filter to be used on next update.
+  "Set the FILTER as current to be used on next render.
 This does not refresh the current buffer."
+  (setq emms-browser-last-browser-filter (cons emms-browser-current-filter-name
+                                               emms-browser-filter-tracks-hook))
   (setq emms-browser-filter-tracks-hook (cdr filter))
   (setq emms-browser-current-filter-name (car filter))
   (run-hooks 'emms-browser-filter-changed-hook))
@@ -2160,11 +2148,13 @@ This does not refresh the current buffer."
 (defun emms-browser-refilter (filter)
   "Filter and render the top-level tracks."
   (emms-browser-set-filter filter)
-  (emms-browse-by (or emms-browser-top-level-type
-                      emms-browser-default-browse-type)))
+  (if (string= (buffer-name) emms-browser-search-buffer-name)
+      (emms-browser-search-refilter)
+    (emms-browse-by (or emms-browser-top-level-type
+                        emms-browser-default-browse-type))))
 
 (defun emms-browser-next-filter (&optional reverse)
-  "Redisplay with the next filter."
+  "Redisplay with the next filter. Reverse the order if REVERSE is true."
   (interactive)
   (let* ((list (if reverse
                    (reverse emms-browser-filters)
@@ -2181,15 +2171,35 @@ This does not refresh the current buffer."
   (interactive)
   (emms-browser-next-filter t))
 
+(defun emms-browser-toggle-filter ()
+  "Toggle filtering between the last filter and the emms-default-filter."
+  (interactive)
+  (if (and emms-browser-last-browser-filter
+           (string= emms-browser-current-filter-name
+                    emms-browser-default-filter))
+      (emms-browser-refilter
+       emms-browser-last-browser-filter)
+    (emms-browser-refilter
+     (assoc emms-browser-default-filter emms-browser-filters))))
+
+(defun emms-browser-select-filter ()
+  "Select a filter."
+  (interactive)
+  (let* ((filter-name
+          (completing-read "Choose a filter:"
+                           emms-browser-filters nil t))
+         (filter (assoc filter-name emms-browser-filters)))
+    (emms-browser-refilter filter)))
+
 (defun emms-browser-filter-only-dir (dirname)
-  "Generate a function which checks if a track is in DIRNAME.
+  "Generate a function to check if a track is in DIRNAME.
 If the track is not in DIRNAME, return t."
   (let ((re (concat "^" (expand-file-name dirname))))
     (lambda (track)
       (not (string-match re (emms-track-get track 'name))))))
 
 (defun emms-browser-filter-only-type (type)
-  "Generate a function which checks a track's type.
+  "Generate a function to check a track's type.
 If the track is not of TYPE, return t."
   (lambda (track)
     (not (eq type (emms-track-get track 'type)))))
