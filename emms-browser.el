@@ -525,6 +525,7 @@ example function is `emms-browse-by-artist'."
 
 (defun emms-browser-mode (&optional no-update)
   "A major mode for the Emms browser.
+Does not set the browser buffer to current unless NO-UPDATE is set.
 \\{emms-browser-mode-map}"
   ;; create a new buffer
   (interactive)
@@ -565,6 +566,7 @@ If a browser search exists, return it."
         emms-browser-buffer)))
 
 (defun emms-browser-ensure-browser-buffer ()
+  "Ensure the current buffer is the browser buffer."
   (unless (eq major-mode 'emms-browser-mode)
     (error "Current buffer is not an emms-browser buffer")))
 
@@ -583,7 +585,7 @@ If a browser search exists, return it."
 ;; subelements will be stored in a bdata alist structure.
 
 (defmacro emms-browser-add-category (name type)
-  "Create an interactive function emms-browse-by-NAME."
+  "Create an interactive function with NAME and info TYPE emms-browse-by-NAME."
   (let ((funname (intern (concat "emms-browse-by-" name)))
         (funcdesc (concat "Browse by " name ".")))
     `(defun ,funname ()
@@ -682,7 +684,7 @@ For \\='info-year TYPE, use \\='info-originalyear, \\='info-originaldate and
     hash))
 
 (defun emms-browser-render-hash (db type)
-  "Render a mapping (DB) into a browser buffer."
+  "Render a mapping (DB) with TYPE into a browser buffer."
   (maphash (lambda (desc data)
              (emms-browser-insert-top-level-entry desc data type))
            db)
@@ -757,7 +759,7 @@ Eg. if CURRENT-MAPPING is currently \\='info-artist, return
    type level))
 
 (defun emms-browser-make-bdata-tree-recurse (type level tracks)
-  "Build a tree of alists based on a list of tracks, TRACKS.
+  "Build a tree of alists based on TYPE, LEVEL and a list of tracks, TRACKS.
 For example, if TYPE is \\='info-year, return an alist like:
 artist1 -> album1 -> *track* 1.."
   (let* ((next-type (emms-browser-next-mapping-type type))
@@ -781,7 +783,7 @@ artist1 -> album1 -> *track* 1.."
               alist))))
 
 (defun emms-browser-make-name (entry type)
-  "Return a name for ENTRY, used for making a bdata object."
+  "Return a name for ENTRY and TYPE, used for making a bdata object."
   (let ((key (car entry))
         (track (cadr entry))
         artist title) ;; only the first track
@@ -808,7 +810,7 @@ return an empty string."
          tracknum)))))
 
 (defun emms-browser-disc-number (track)
-  "Return a string representation of a track number.
+  "Return a string representation of the TRACK number.
 The string will end in a space. If no track number is available,
 return an empty string."
   (let ((discnum (emms-track-get track 'info-discnumber)))
@@ -817,7 +819,7 @@ return an empty string."
       discnum)))
 
 (defun emms-browser-year-number (track)
-  "Return a string representation of a track\\='s year.
+  "Return a string representation of a TRACK\\='s year.
 This will be in the form \\='(1998) \\='."
   (let ((year (emms-track-get-year track)))
     (if (or (not (stringp year)) (string= year "0"))
@@ -826,7 +828,7 @@ This will be in the form \\='(1998) \\='."
        "(" year ") "))))
 
 (defun emms-browser-track-duration (track)
-  "Return a string representation of a track duration.
+  "Return a string representation of the TRACK duration.
 If no duration is available, return an empty string."
   (let ((pmin (emms-track-get track 'info-playing-time-min))
         (psec (emms-track-get track 'info-playing-time-sec))
@@ -935,11 +937,12 @@ Uses `emms-browser-alpha-sort-function'."
     alist))
 
 (defun emms-browser-sort-by-year-or-name (alist)
-  "Sort based on year or name."
+  "Sort ALIST based on year or name."
   (sort alist (emms-browser-sort-cadr
                'emms-browser-sort-by-year-or-name-p)))
 
 (defun emms-browser-sort-by-year-or-name-p (a b)
+  "Sort A and B by on year or name."
   ;; FIXME: this is a bit of a hack
   (let ((a-desc (concat
                  (emms-browser-year-number a)
@@ -1117,21 +1120,21 @@ Stops at the next line at the same level, or EOF."
 ;; --------------------------------------------------
 
 (defun emms-browser-playlist-insert-group (bdata)
-  "Insert a group description into the playlist buffer."
+  "Insert a group description of BDATA into the playlist buffer."
   (let ((name (emms-browser-format-line bdata 'playlist)))
     (with-current-emms-playlist
       (goto-char (point-max))
       (insert name "\n"))))
 
 (defun emms-browser-playlist-insert-track (bdata)
-  "Insert a track into the playlist buffer."
+  "Insert a track from BDATA into the playlist buffer."
   (let ((name (emms-browser-format-line bdata 'playlist)))
     (with-current-emms-playlist
       (goto-char (point-max))
       (insert name "\n"))))
 
 (defun emms-browser-playlist-insert-bdata (bdata starting-level)
-  "Add all tracks in BDATA to the playlist."
+  "Add all tracks in BDATA at STARTING-LEVEL to the playlist."
   (let ((type (emms-browser-bdata-type bdata))
         (level (emms-browser-bdata-level bdata))
         emms-browser-current-indent)
@@ -1310,7 +1313,7 @@ Return the playlist buffer point-max before adding."
       (emms-browser-show-subitems))))
 
 (defun emms-browser-next-non-track (&optional direction)
-  "Jump to the next non-track element."
+  "Jump to the next non-track element in DIRECTION."
   (interactive)
   (let ((continue t))
     (while (and continue
@@ -1368,7 +1371,7 @@ Return the playlist buffer point-max before adding."
                 (emms-browser-subitems-visible))))
 
 (defun emms-browser-view-in-dired (&optional bdata)
-  "View the current directory in dired."
+  "View the current directory from BDATA or bdata at point in DIRED."
   ;; FIXME: currently just grabs the directory from the first track
   (interactive)
   (if bdata
@@ -1384,6 +1387,7 @@ Return the playlist buffer point-max before adding."
   "Remove all tracks at point or in region if active.
 Unless DELETE is non-nil or with prefix argument, this only acts on the browser,
 files are untouched.
+Optionally with line number at position START and position of END within the region.
 If caching is enabled, files are removed from the cache as well.
 When the region is not active, a numeric prefix argument remove that many
 tracks from point, it does not delete files."
@@ -1435,6 +1439,7 @@ tracks from point, it does not delete files."
 (put 'emms-browser-delete-files 'disabled t)
 
 (defun emms-browser-clear-playlist ()
+  "Clear playlist."
   (interactive)
   (with-current-emms-playlist
     (emms-playlist-clear)))
@@ -1449,6 +1454,7 @@ tracks from point, it does not delete files."
        (concat url data)))))
 
 (defun emms-browser-lookup-wikipedia (field)
+  "Lookup contents of FIELD in wikipedia."
   (emms-browser-lookup
    field "http://en.wikipedia.org/wiki/Special:Search?search="))
 
@@ -1771,7 +1777,12 @@ emms-browser-last-search-caches in the same format as the emms-cache-db."
 
 (defun emms-browser-search-by-names ()
   (interactive)
-  (emms-browser-search '(info-albumartist info-artist info-composer info-performer info-title info-album)))
+  (emms-browser-search:w
+   '(info-albumartist info-artist
+                      info-composer
+                      info-performer
+                      info-title
+                      info-album)))
 
 
 ;; --------------------------------------------------
@@ -1913,10 +1924,11 @@ If > album level, most of the track data will not make sense."
             ("d" . ,(emms-browser-track-duration track))))
 	 str)
     (when (equal type 'info-album)
-      (setq format-choices (append format-choices
-                                   `(("cS" . ,(emms-browser-get-cover-str path 'small))
-                                     ("cM" . ,(emms-browser-get-cover-str path 'medium))
-                                     ("cL" . ,(emms-browser-get-cover-str path 'large))))))
+      (setq format-choices
+            (append format-choices
+                    `(("cS" . ,(emms-browser-get-cover-str path 'small))
+                      ("cM" . ,(emms-browser-get-cover-str path 'medium))
+                      ("cL" . ,(emms-browser-get-cover-str path 'large))))))
 
 
     (when (functionp format)
@@ -2017,7 +2029,7 @@ the text that it generates."
 ;; function for specifiers which may be empty.
 
 (defvar emms-browser-default-format "%i%n"
-  "indent + name")
+  "Indent + name.")
 
 ;; tracks
 (defvar emms-browser-info-title-format
